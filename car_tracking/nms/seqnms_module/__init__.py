@@ -1,0 +1,1 @@
+from .seqnms import seq_nms as seq_nms_scoring_func

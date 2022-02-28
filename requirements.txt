@@ -1,0 +1,15 @@
+setuptools>=57.1.0
+
+requests>=2.22.0
+click>=7.0
+Cython>=0.29.23
+filterpy>=1.4.5
+lap>=0.4.0
+matplotlib>=3.4.2
+motmetrics>=1.2.0
+numpy>=1.21.0
+opencv-python>=4.5.2.54
+scipy>=1.7.0
+scikit-image>=0.18.1
+tqdm>=4.61.2
+xml_to_dict>=0.1.6
