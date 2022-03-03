@@ -1,0 +1,90 @@
+from dataclasses import dataclass
+from typing import List, Tuple, Optional
+import pandas as pd
+import os
+from pathlib import Path
+
+@dataclass
+class Position:
+    lat: float
+    lon: float
+
+@dataclass
+class Camera:
+    id: str
+    timestamp: float
+    gt: pd.DataFrame
+    path: str
+    position: Optional[Position] = None
+
+    @property
+    def video_path(self) -> str:
+        return os.path.join(self.path, "vdo.avi")
+
+@dataclass
+class Scenario:
+    id: str
+    cameras: List[Camera]
+
+    def __len__(self):
+        return len(self.cameras)
+
+    def __getitem__(self, idx):
+        return self.cameras[idx]
+
+class AICity:
+    VALID_SPLITS = ['train', 'validation', 'test']
+    def __init__(self, path: str, split_type: str = 'train'):
+        self.path = path
+        self.split_type = split_type.lower()
+
+        if split_type not in self.VALID_SPLITS:
+            raise ValueError(f'Invalid split type: {split_type}')
+        
+        self.scenarios = []
+
+        self._load_data()
+
+    def _load_data(self):
+        root = Path(self.path)
+        scenario_folder = root / self.split_type
+        scenario_ids = [x.name for x in scenario_folder.iterdir() if x.is_dir()]
+
+        # timestamps
+        timestamps_for_cameras = {}
+        timestamps_path = root / "cam_timestamp"
+        for sid in scenario_ids:
+            timestamps_file = timestamps_path / (sid + ".txt")
+            with open(timestamps_file, "r") as f:
+                line = f.readline().strip()
+                while line != "":
+                    cam_id, timestamp = line.split()
+                    timestamps_for_cameras[cam_id] = float(timestamp)
+                    line = f.readline().strip()
+
+        for sid in scenario_ids:
+            cameras = []
+            camera_ids = [x.name for x in (scenario_folder / sid).iterdir() if x.is_dir()]
+            for cid in camera_ids:
+                gt_path = (scenario_folder / sid / cid / "gt" / "gt.txt")
+                gt = pd.read_csv(gt_path, sep=',', names=["frame", "id", "x", "y", "w", "h"], 
+                                usecols=["frame", "id", "x", "y", "w", "h"])
+                c = Camera(cid, timestamps_for_cameras[cid], gt, str(scenario_folder / sid / cid))
+                cameras.append(c)
+
+            s = Scenario(sid, cameras)
+            self.scenarios.append(s)
+
+    def __len__(self):
+        return len(self.scenarios)
+
+    def __getitem__(self, idx):
+        return self.scenarios[idx]
+
+if __name__ == "__main__":
+    ds = AICity("/media/oscar/Data/AIC21_Track3_MTMC_Tracking", "train")
+    print(ds[0][0].video_path)
+
+
+
+
