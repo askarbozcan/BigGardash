@@ -1,1 +1,1 @@
-from .yolo import YOLODetector
+from .yolov5 import YOLOV5Detector

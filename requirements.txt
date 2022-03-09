@@ -13,3 +13,4 @@ scipy>=1.7.0
 scikit-image>=0.18.1
 tqdm>=4.61.2
 xml_to_dict>=0.1.6
+torch>=1.8.1
