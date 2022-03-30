@@ -1,1 +1,1 @@
-SKIP_N = 5
+SKIP_N = 10
