@@ -10,6 +10,8 @@ detrac_data/
 *.so
 
 
+*.pt
+
 pretrained_models/*
 !pretrained_models/.gitkeep 
 

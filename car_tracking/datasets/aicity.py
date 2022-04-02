@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 import pandas as pd
 import os
 from pathlib import Path
@@ -24,15 +24,15 @@ class Camera:
 @dataclass
 class Scenario:
     id: str
-    cameras: List[Camera]
+    cameras: Dict[str, Camera]
 
     def __len__(self):
         return len(self.cameras)
 
-    def __getitem__(self, idx):
-        return self.cameras[idx]
+    def __getitem__(self, key):
+        return self.cameras[key]
 
-class AICity:
+class AICityDataset:
     VALID_SPLITS = ['train', 'validation', 'test']
     def __init__(self, path: str, split_type: str = 'train'):
         self.path = path
@@ -41,7 +41,7 @@ class AICity:
         if split_type not in self.VALID_SPLITS:
             raise ValueError(f'Invalid split type: {split_type}')
         
-        self.scenarios = []
+        self.scenarios = {}
 
         self._load_data()
 
@@ -63,17 +63,17 @@ class AICity:
                     line = f.readline().strip()
 
         for sid in scenario_ids:
-            cameras = []
+            cameras = {}
             camera_ids = [x.name for x in (scenario_folder / sid).iterdir() if x.is_dir()]
             for cid in camera_ids:
                 gt_path = (scenario_folder / sid / cid / "gt" / "gt.txt")
                 gt = pd.read_csv(gt_path, sep=',', names=["frame", "id", "x", "y", "w", "h"], 
                                 usecols=["frame", "id", "x", "y", "w", "h"])
                 c = Camera(cid, timestamps_for_cameras[cid], gt, str(scenario_folder / sid / cid))
-                cameras.append(c)
+                cameras[cid] = c
 
             s = Scenario(sid, cameras)
-            self.scenarios.append(s)
+            self.scenarios[sid] = s
 
     def __len__(self):
         return len(self.scenarios)
@@ -82,7 +82,7 @@ class AICity:
         return self.scenarios[idx]
 
 if __name__ == "__main__":
-    ds = AICity("/media/oscar/Data/AIC21_Track3_MTMC_Tracking", "train")
+    ds = AICityDataset("/media/oscar/Data/AIC21_Track3_MTMC_Tracking", "train")
     print(ds[0][0].video_path)
 
 
