@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import copy 
-from .compute_overlap import compute_overlap_areas_given, compute_area
-
+import copy
+try:
+    from .compute_overlap import compute_overlap_areas_given, compute_area
+except ModuleNotFoundError:
+    print("compute_overlap.pyx probably not built. Ignoring SeqNMS import.")
+    
 '''
 CONF_THRESH = 0.5
 NMS_THRESH = 0.3

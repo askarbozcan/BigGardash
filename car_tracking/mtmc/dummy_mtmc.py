@@ -1,13 +1,14 @@
 from ._base import BaseMTMC
 
 class DummyMTMC(BaseMTMC):
-    def update(self, boxes_list, ids_list, labels_list, camera_id_list):
-        assert len(boxes_list) == len(ids_list) == len(labels_list) == len(camera_id_list), \
-            "The length of boxes_list, ids_list, labels_list and camera_id_list must be equal."
+    def update(self, boxes_dict, ids_dict, labels_dict):
+        assert len(boxes_dict) == len(ids_dict) == len(labels_dict), \
+            "boxes_dict, ids_dict, labels_dict must have the same length"
 
-        all_ids = []
-        for i,cid in enumerate(camera_id_list):
-            camera_ids = [f"{cid}_{_id}" for _id in ids_list[i]]
-            all_ids.append(camera_ids)
+        all_ids = {}
+        for cid, id_list in ids_dict.items():
+            camera_ids = [f"{cid}_{_id}" for _id in id_list]
+            all_ids[cid] = camera_ids
 
         return all_ids
+
