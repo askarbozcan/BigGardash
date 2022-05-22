@@ -19,10 +19,10 @@ from __future__ import print_function
 
 import os
 import numpy as np
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+#import matplotlib
+#matplotlib.use('TkAgg')
+#import matplotlib.pyplot as plt
+#import matplotlib.patches as patches
 from skimage import io
 
 import glob
@@ -268,6 +268,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+"""
 if __name__ == '__main__':
   # all train
   args = parse_args()
@@ -328,3 +329,4 @@ if __name__ == '__main__':
 
   if(display):
     print("Note: to get real runtime results run without the option: --display")
+"""
