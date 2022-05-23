@@ -1,4 +1,5 @@
-from flask import Flask, render_template, Response, jsonify
+import eventlet
+import socketio
 import base64
 import click
 import cv2
@@ -12,13 +13,12 @@ from ..processor.mtmc import MTMCProcessor
 
 import json
 
-app = Flask(__name__)
+sio = socketio.Server()
+app = socketio.WSGIApp(sio)
+
 PORT = 4920
 SKIP_N = 5
 
-@app.route("/")
-def index():
-    return render_template("index.html")
 
 def mtmc_generator(scenario, processor):
     boxes_dict, ids_dict, labels_dict = {}, {}, {}
@@ -56,7 +56,7 @@ def mtmc_generator(scenario, processor):
             yield {"frames": frames_dict, "boxes": boxes_dict, "ids": ids_dict, "labels": labels_dict}
 
 
-def flask_generator(results_generator):
+def get_current_data_dict(results_generator):
     for result in results_generator:
 
         frames = {}
@@ -68,10 +68,10 @@ def flask_generator(results_generator):
         boxes = {cam_id: x.tolist() for cam_id, x in result["boxes"].items()}
         labels = {cam_id: x.tolist() for cam_id, x in result["labels"].items()}
         response_dict = {"frames":frames, "boxes": boxes, "ids": result["ids"], "labels": labels}
-        yield b"--frame\r\n"+bytes(json.dumps(response_dict), "utf-8")+b"\r\n"
+        yield response_dict
 
-@app.route("/stream")
-def stream():
+@sio.event
+def give_stream_data(sid):
     ds = AICityDataset(app.config["dataset_path"], app.config["dataset_split"])
     scenario = ds[app.config["scenario_id"]]
 
@@ -82,8 +82,9 @@ def stream():
     mtmc = DummyMTMC()
     processor = MTMCProcessor(detector, trackers, mtmc)
 
-    generator = flask_generator(mtmc_generator(scenario, processor))
-    return Response(generator, mimetype="mimetype='multipart/x-mixed-replace; boundary=frame")
+    generator = get_current_data_dict(mtmc_generator(scenario, processor))
+    for data_dict in generator:
+        sio.emit("receive_stream_data", data_dict)
 
 @click.command()
 @click.option("--port", default=PORT, help="Port to run the server on.")
