@@ -89,9 +89,12 @@ global_generator: MTMCGeneration = None # defined in __main__
 
 @sio.event
 def give_stream_data(sid):
+    print("accepted connection")
     generator = global_generator.get_current_data_dict()
+    print("generator OK")
     for data_dict in generator:
         sio.emit("receive_stream_data", data_dict)
+        sio.sleep(0.1)
 
 @click.command()
 @click.option("--port", default=PORT, help="Port to run the server on.")
