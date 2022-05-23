@@ -29,7 +29,7 @@ class MTMCGeneration:
         for cam in self.scenario.cameras.values():
             self.trackers[cam.id] = SORT()
         self.mtmc = DummyMTMC()
-        self.processor = MTMCProcessor(self.detector, self.trackers, mtmc)
+        self.processor = MTMCProcessor(self.detector, self.trackers, self.mtmc)
 
 
 
