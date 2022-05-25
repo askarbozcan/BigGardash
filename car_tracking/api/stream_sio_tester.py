@@ -10,7 +10,7 @@ def connect():
 @sio.event
 def receive_stream_data(data):
     print("started receiving stream data")
-    print(data)
+    print(data.keys())
     #sio.wait()
 if __name__ == "__main__":
     sio.connect("http://localhost:4920")
