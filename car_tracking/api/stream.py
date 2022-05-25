@@ -76,7 +76,7 @@ class MTMCGeneration:
             for cam_id, frame in result["frames"].items():
                 jpeg = cv2.imencode(".JPEG", frame)[1].tobytes()
                 encoded = base64.b64encode(jpeg)
-                frames[cam_id] = str(encoded)
+                frames[cam_id] = encoded.decode("utf-8")
 
             boxes = {cam_id: x.tolist() for cam_id, x in result["boxes"].items()}
             labels = {cam_id: x.tolist() for cam_id, x in result["labels"].items()}
