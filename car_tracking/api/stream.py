@@ -24,7 +24,7 @@ class MTMCGeneration:
         ds = AICityDataset(dataset_path, dataset_split)
         self.scenario = ds[scenario_id]
 
-        self.detector = YOLOV5Detector(model_str="yolov5s6", confidence=.2, label_whitelist=[2,3,5,7])
+        self.detector = YOLOV5Detector(model_str="yolov5n6", confidence=.2, label_whitelist=[2,3,5,7])
         self.trackers = {}
         for cam in self.scenario.cameras.values():
             self.trackers[cam.id] = SORT()
@@ -86,17 +86,12 @@ class MTMCGeneration:
 
 #########
 global_generator: MTMCGeneration = None # defined in __main__
-
+global_data_queue = eventlet.queue.LifoQueue(maxsize=20)
 
 @sio.event
 def give_stream_data(sid):
-    print("accepted connection")
-    generator = global_generator.get_current_data_dict()
-    print("generator OK")
-    
-    for data_dict in generator:
-        sio.emit("receive_stream_data", data_dict)
-        sio.sleep(0.1)
+    data_dict = global_data_queue.get()
+    sio.emit("receive_stream_data", data_dict)
 
 @sio.event
 def give_camera_info(sid):
@@ -105,7 +100,13 @@ def give_camera_info(sid):
     for cam_id, cam in global_generator.scenario.cameras.items():
         cameras[cam_id] = {"lat": 0, "lon": 0}
     sio.emit("receive_camera_info", cameras)
-    
+
+
+def threaded_model():
+    generator = global_generator.get_current_data_dict()
+
+    for data_dict in generator:
+        global_data_queue.put(data_dict)
 
 @click.command()
 @click.option("--port", default=PORT, help="Port to run the server on.")
@@ -115,6 +116,8 @@ def give_camera_info(sid):
 def main(port, dataset_path, dataset_split, scenario_id):
     global global_generator
     global_generator = MTMCGeneration(dataset_path, dataset_split, scenario_id)
+    
+    eventlet.spawn(threaded_model)
     eventlet.wsgi.server(eventlet.listen(('', port)), app)
 
 if __name__ == "__main__":
