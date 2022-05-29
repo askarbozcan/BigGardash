@@ -13,7 +13,7 @@ from ..processor.mtmc import MTMCProcessor
 
 import json
 
-sio = socketio.Server(async_handlers=True, cors_allowed_origins="*")
+sio = socketio.Server(async_handlers=False, cors_allowed_origins="*", engineio_logger=False)
 app = socketio.WSGIApp(sio)
 
 PORT = 4920
@@ -51,7 +51,8 @@ class MTMCGeneration:
                     if cap.isOpened():
                         ret, frame = cap.read()
                         if not ret:
-                            continue
+                            break
+
                         frame = cv2.resize(frame, (640, 480))
                         if frame_counters[cam_id] % SKIP_N != 0:
                             frame_counters[cam_id] += 1
@@ -89,7 +90,7 @@ class MTMCGeneration:
 
 #########
 global_generator: MTMCGeneration = None # defined in __main__
-global_data_queue = eventlet.queue.LifoQueue(maxsize=20)
+global_data_queue = eventlet.queue.Queue(maxsize=20)
 
 @sio.event
 def give_stream_data(sid):
@@ -108,9 +109,14 @@ def give_camera_info(sid):
 def threaded_model():
     generator = global_generator.get_current_data_dict()
 
-    for data_dict in generator:
-        global_data_queue.put(data_dict)
+    while True:
+        for data_dict in generator:
+            print(global_data_queue.qsize(), "Queue size")
+            if global_data_queue.full():
+                global_data_queue.get(block=True)
+            global_data_queue.put(data_dict, block=True)
 
+            sio.sleep(.5)
 @click.command()
 @click.option("--port", default=PORT, help="Port to run the server on.")
 @click.option("--dataset_path", help="AI City dataset path")
