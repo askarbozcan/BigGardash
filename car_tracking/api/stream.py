@@ -51,6 +51,7 @@ class MTMCGeneration:
                     if cap.isOpened():
                         ret, frame = cap.read()
                         if not ret:
+                            videos_finished = True
                             break
 
                         frame = cv2.resize(frame, (640, 480))
@@ -117,6 +118,7 @@ def threaded_model():
             global_data_queue.put(data_dict, block=True)
 
             sio.sleep(.5)
+            print("Finished iteration model")
 @click.command()
 @click.option("--port", default=PORT, help="Port to run the server on.")
 @click.option("--dataset_path", help="AI City dataset path")
