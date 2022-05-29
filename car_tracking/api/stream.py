@@ -96,6 +96,15 @@ def give_stream_data(sid):
         sio.emit("receive_stream_data", data_dict)
         sio.sleep(0.1)
 
+@sio.event
+def give_camera_info(sid):
+    print("accepted connection camera_info")
+    cameras = {}
+    for cam_id, cam in global_generator.scenario.cameras.items():
+        cameras[cam_id] = {"lat": 0, "lon": 0}
+    sio.emit("receive_camera_info", cameras)
+    
+
 @click.command()
 @click.option("--port", default=PORT, help="Port to run the server on.")
 @click.option("--dataset_path", help="AI City dataset path")
