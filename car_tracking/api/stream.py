@@ -13,9 +13,8 @@ from ..processor.mtmc import MTMCProcessor
 
 import json
 
-sio = socketio.Server()
+sio = socketio.Server(async_handlers=True, cors_allowed_origins="*")
 app = socketio.WSGIApp(sio)
-socketio.init_app(app, cors_allowed_origins="*")
 
 PORT = 4920
 SKIP_N = 5
@@ -51,6 +50,8 @@ class MTMCGeneration:
 
                     if cap.isOpened():
                         ret, frame = cap.read()
+                        if not ret:
+                            continue
                         frame = cv2.resize(frame, (640, 480))
                         if frame_counters[cam_id] % SKIP_N != 0:
                             frame_counters[cam_id] += 1
