@@ -86,15 +86,24 @@ class MTMCGeneration:
 
 #########
 global_generator: MTMCGeneration = None # defined in __main__
+socket_closed = False
+
 
 @sio.event
 def give_stream_data(sid):
     print("accepted connection")
+    socket_closed = False
     generator = global_generator.get_current_data_dict()
     print("generator OK")
-    for data_dict in generator:
-        sio.emit("receive_stream_data", data_dict)
-        sio.sleep(0.1)
+
+    while not socket_closed:
+        for data_dict in generator:
+            sio.emit("receive_stream_data", data_dict)
+            sio.sleep(0.1)
+
+@sio.event
+def stop_stream(sid):
+    socket_closed = True
 
 @sio.event
 def give_camera_info(sid):
