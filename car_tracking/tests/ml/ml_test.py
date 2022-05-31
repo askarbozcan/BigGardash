@@ -41,6 +41,12 @@ def processor(detector, tracker, mtmc, cameras_list):
         trackers[cam] = tracker # shouldn't matter which tracker is used
     return MTMCProcessor(detector, trackers, mtmc)
 
+def test_detector_load(detector):
+    assert hasattr(detector, "model")
+
+def test_tracker_load(tracker):
+    assert tracker is not None
+
 def test_detector_shape(detector):
     test_frame = np.zeros((480, 640, 3))
     boxes, scores, labels = detector.detect_frame(test_frame)
