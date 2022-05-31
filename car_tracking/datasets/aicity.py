@@ -82,8 +82,8 @@ class AICityDataset:
         return self.scenarios[idx]
 
 if __name__ == "__main__":
-    ds = AICityDataset("/media/oscar/Data/AIC21_Track3_MTMC_Tracking", "train")
-    print(ds[0][0].video_path)
+    ds = AICityDataset("/Users/askar/Documents/demoset", "train")
+    print(ds["S04"].cameras["c016"].gt)
 
 
 
