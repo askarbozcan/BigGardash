@@ -54,7 +54,7 @@ class MTMCGeneration:
                             videos_finished = True
                             break
 
-                        frame = cv2.resize(frame, (640, 480))
+                        #frame = cv2.resize(frame, (640, 480))
                         if frame_counters[cam_id] % SKIP_N != 0:
                             frame_counters[cam_id] += 1
                             continue
