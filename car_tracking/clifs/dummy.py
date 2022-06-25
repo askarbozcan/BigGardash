@@ -11,12 +11,12 @@ class DummyCLIFS(BaseCLIFS):
 
         dummy_response1 = {
             "frame": np.zeros((300,300,3), dtype=np.uint8),
-            "location": "c017",
+            "camera": "c017",
             "id": "dummy_id"
         }
         dummy_response2 = {
             "frame": np.zeros((300,300,3), dtype=np.uint8),
-            "location": "c016",
+            "camera": "c016",
             "id": "dummy_id2"
         }
 
