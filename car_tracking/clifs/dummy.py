@@ -1,12 +1,23 @@
 import numpy as np
 from ._base import BaseCLIFS
-
+from typing import Dict
 class DummyCLIFS(BaseCLIFS):
     def __init__(self):
         pass
 
-    def match(self, frames, prompt):
-        dummy_match1 = {"id": "dummy1", "location": "cam0", "frame": np.zeros((360, 360, 3), dtype=np.uint8)}
-        dummy_match2 = {"id": "dummy2", "location": "cam0", "frame": np.zeros((360, 360, 3), dtype=np.uint8)}
+    def match(self, frames: Dict[str, np.ndarray], boxes: Dict[str, np.ndarray],\
+                    ids: Dict[str, np.ndarray], labels: Dict[str, np.ndarray],
+                    prompt: str):
 
-        return [dummy_match1, dummy_match2]
+        dummy_response1 = {
+            "frame": np.zeros((300,300,3), dtype=np.uint8),
+            "location": "c017",
+            "id": "dummy_id"
+        }
+        dummy_response2 = {
+            "frame": np.zeros((300,300,3), dtype=np.uint8),
+            "location": "c016",
+            "id": "dummy_id2"
+        }
+
+        return [dummy_response1, dummy_response2]

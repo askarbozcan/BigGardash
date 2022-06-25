@@ -10,7 +10,7 @@ from ..detector import YOLOV5Detector
 from ..tracker import SORT
 from ..mtmc import DummyMTMC
 from ..processor.mtmc import MTMCProcessor
-
+from ..clifs import DummyCLIFS
 import json
 
 sio = socketio.Server(async_handlers=False, cors_allowed_origins="*", engineio_logger=False)
@@ -20,6 +20,8 @@ PORT = 4920
 SKIP_N = 5
 
 class MTMCGeneration:
+    last_generated_dict: dict = None
+
     def __init__(self, dataset_path, dataset_split, scenario_id):
         ds = AICityDataset(dataset_path, dataset_split)
         self.scenario = ds[scenario_id]
@@ -71,22 +73,27 @@ class MTMCGeneration:
                 if len(boxes_dict) == 0:
                     continue
 
-                yield {"frames": frames_dict, "boxes": boxes_dict, "ids": ids_dict, "labels": labels_dict}
-
+                res = {"frames": frames_dict, "boxes": boxes_dict, "ids": ids_dict, "labels": labels_dict}
+                MTMCGeneration.last_generated_dict = res
+                yield res
 
     def get_current_data_dict(self):
         for result in self.mtmc_generator():
 
             frames = {}
             for cam_id, frame in result["frames"].items():
-                jpeg = cv2.imencode(".JPEG", frame)[1].tobytes()
-                encoded = base64.b64encode(jpeg)
-                frames[cam_id] = encoded.decode("utf-8")
+                frames[cam_id] = self.convert_frame_to_jpeg(frame)
 
             boxes = {cam_id: x.tolist() for cam_id, x in result["boxes"].items()}
             labels = {cam_id: x.tolist() for cam_id, x in result["labels"].items()}
             response_dict = {"frames":frames, "boxes": boxes, "ids": result["ids"], "labels": labels}
             yield response_dict
+
+    @staticmethod
+    def convert_frame_to_jpeg(frame):
+        jpeg = cv2.imencode(".JPEG", frame)[1].tobytes()
+        encoded = base64.b64encode(jpeg)
+        return encoded.decode("utf-8")
 
 
 #########
@@ -105,6 +112,24 @@ def give_camera_info(sid):
     for cam_id, cam in global_generator.scenario.cameras.items():
         cameras[cam_id] = {"lat": 0, "lon": 0}
     sio.emit("receive_camera_info", cameras)
+
+
+clifs_matcher = DummyCLIFS()
+
+@sio.event
+def give_match_info(sid, prompt):
+    print("accepted connection match_info")
+    
+    if global_generator.last_generated_dict is None:
+        return []
+    
+    data_dict = global_generator.last_generated_dict
+    matches = clifs_matcher.match(data_dict["frames"], data_dict["boxes"], data_dict["ids"], data_dict["labels"], prompt)
+    for i,m in enumerate(matches):
+        matches[i]["frame"] = MTMCGeneration.convert_frame_to_jpeg(m["frame"])
+    
+    sio.emit("receive_match_info", matches)
+
 
 
 def threaded_model():
