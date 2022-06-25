@@ -117,7 +117,7 @@ def give_camera_info(sid):
 clifs_matcher = DummyCLIFS()
 
 @sio.event
-def give_match_info(sid, prompt):
+def give_match_info(sid, prompt: str):
     print("accepted connection match_info")
     
     if global_generator.last_generated_dict is None:
