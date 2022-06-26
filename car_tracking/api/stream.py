@@ -10,8 +10,9 @@ from ..detector import YOLOV5Detector
 from ..tracker import SORT
 from ..mtmc import DummyMTMC
 from ..processor.mtmc import MTMCProcessor
-from ..clifs import DummyCLIFS
+from ..clifs import DummyCLIFS, CLIPBG
 import json
+import random
 
 sio = socketio.Server(async_handlers=False, cors_allowed_origins="*", engineio_logger=False)
 app = socketio.WSGIApp(sio)
@@ -82,6 +83,7 @@ class MTMCGeneration:
 
             frames = {}
             for cam_id, frame in result["frames"].items():
+                frame = cv2.resize(frame, (600, 480), interpolation=cv2.INTER_AREA)
                 frames[cam_id] = self.convert_frame_to_jpeg(frame)
 
             boxes = {cam_id: x.tolist() for cam_id, x in result["boxes"].items()}
@@ -101,6 +103,22 @@ global_generator: MTMCGeneration = None # defined in __main__
 global_data_queue = eventlet.queue.Queue(maxsize=20)
 
 @sio.event
+def give_car_positions(sid):
+    print("Received request for car positions")
+    data_dict = global_generator.last_generated_dict
+    positions = []
+
+    random.seed(492)
+    for cam_id, cam in global_generator.scenario.cameras.items():
+        for id_ in data_dict["ids"][cam_id]:
+           rand_lat = cam.position.lat + random.normalvariate(0, 0.0001)
+           rand_lon = cam.position.lon + random.normalvariate(0, 0.0001)
+           positions.append({"car_id": id_, "lat": rand_lat, "lon": rand_lon})
+    
+    return positions
+
+
+@sio.event
 def give_stream_data(sid):
     data_dict = global_data_queue.get()
     sio.emit("receive_stream_data", data_dict)
@@ -108,13 +126,20 @@ def give_stream_data(sid):
 @sio.event
 def give_camera_info(sid):
     print("accepted connection camera_info")
+    if global_generator.last_generated_dict is None:
+        return {}
+
     cameras = {}
     for cam_id, cam in global_generator.scenario.cameras.items():
-        cameras[cam_id] = {"lat": 0, "lon": 0}
-    sio.emit("receive_camera_info", cameras)
+        thumbnail = global_generator.last_generated_dict["frames"][cam_id]
+        thumbnail = cv2.resize(thumbnail, (400, 240), interpolation=cv2.INTER_AREA)
+        thumbnail = global_generator.convert_frame_to_jpeg(thumbnail)
+        cameras[cam_id] = {"lat": cam.position.lat, "lon": cam.position.lon, "thumbnail": thumbnail}
+    
+    return cameras
 
-
-clifs_matcher = DummyCLIFS()
+#clifs_matcher = DummyCLIFS()
+clifs_matcher = CLIPBG()
 
 @sio.event
 def give_match_info(sid, prompt: str):
@@ -128,8 +153,9 @@ def give_match_info(sid, prompt: str):
     for i,m in enumerate(matches):
         matches[i]["frame"] = MTMCGeneration.convert_frame_to_jpeg(m["frame"])
     
-    sio.emit("receive_match_info", matches)
-
+    print("Finished matching")
+    #sio.emit("receive_match_info", matches)
+    return matches
 
 
 def threaded_model():
@@ -144,6 +170,7 @@ def threaded_model():
 
             sio.sleep(.5)
             print("Finished iteration model")
+
 @click.command()
 @click.option("--port", default=PORT, help="Port to run the server on.")
 @click.option("--dataset_path", help="AI City dataset path")

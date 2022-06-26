@@ -34,6 +34,11 @@ class Scenario:
 
 class AICityDataset:
     VALID_SPLITS = ['train', 'validation', 'test']
+    CAMERA_POSITIONS = {
+        "c016": Position(42.4995215, -90.6906985),
+        "c017": Position(42.4987505, -90.6906065),
+        "default": Position(42.49880, -90.69069)
+    }
     def __init__(self, path: str, split_type: str = 'train'):
         self.path = path
         self.split_type = split_type.lower()
@@ -70,6 +75,11 @@ class AICityDataset:
                 gt = pd.read_csv(gt_path, sep=',', names=["frame", "id", "x", "y", "w", "h"], 
                                 usecols=["frame", "id", "x", "y", "w", "h"])
                 c = Camera(cid, timestamps_for_cameras[cid], gt, str(scenario_folder / sid / cid))
+                try:
+                    c.position = self.CAMERA_POSITIONS[cid]
+                except KeyError:
+                    c.position = self.CAMERA_POSITIONS["default"]
+                    
                 cameras[cid] = c
 
             s = Scenario(sid, cameras)
