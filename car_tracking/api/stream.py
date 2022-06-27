@@ -31,7 +31,7 @@ class MTMCGeneration:
         self.detector = YOLOV5Detector(model_str="yolov5s6", confidence=.4, label_whitelist=[2,3,5,7])
         self.trackers = {}
         for cam in self.scenario.cameras.values():
-            self.trackers[cam.id] = SORT(min_hits=2, max_age=2, iou_threshold=.2)
+            self.trackers[cam.id] = SORT(min_hits=2, max_age=4, iou_threshold=.2)
         self.mtmc = DummyMTMC()
         self.processor = MTMCProcessor(self.detector, self.trackers, self.mtmc)
 
@@ -124,7 +124,7 @@ class MTMCGeneration:
 
 #########
 global_generator: MTMCGeneration = None # defined in __main__
-global_data_queue = eventlet.queue.Queue(maxsize=1)
+global_data_queue = eventlet.queue.Queue(maxsize=5)
 
 @sio.event
 def give_car_positions(sid):
@@ -137,7 +137,7 @@ def give_car_positions(sid):
         for id_ in data_dict["ids"][cam_id]:
            rand_lat = cam.position.lat + random.normalvariate(0, 0.0001)
            rand_lon = cam.position.lon + random.normalvariate(0, 0.0001)
-           positions.append({"car_id": id_, "lat": rand_lat, "lon": rand_lon})
+           positions.append({"car_id": id_, "lat": rand_lat, "lon": rand_lon, "cam_id": cam_id})
     
     return positions
 
