@@ -4,7 +4,6 @@ import socketio
 import base64
 import click
 import cv2
-from sympy import Q
 from car_tracking.datasets.aicity import Scenario
 from ..datasets import AICityDataset
 from ..detector import YOLOV5Detector
@@ -20,7 +19,7 @@ sio = socketio.Server(async_handlers=False, cors_allowed_origins="*", engineio_l
 app = socketio.WSGIApp(sio)
 
 PORT = 4920
-SKIP_N = 5
+SKIP_N = 2
 
 class MTMCGeneration:
     last_generated_dict: dict = None
@@ -29,10 +28,10 @@ class MTMCGeneration:
         ds = AICityDataset(dataset_path, dataset_split)
         self.scenario = ds[scenario_id]
 
-        self.detector = YOLOV5Detector(model_str="yolov5s6", confidence=.2, label_whitelist=[2,3,5,7])
+        self.detector = YOLOV5Detector(model_str="yolov5s6", confidence=.4, label_whitelist=[2,3,5,7])
         self.trackers = {}
         for cam in self.scenario.cameras.values():
-            self.trackers[cam.id] = SORT()
+            self.trackers[cam.id] = SORT(min_hits=2, max_age=2, iou_threshold=.2)
         self.mtmc = DummyMTMC()
         self.processor = MTMCProcessor(self.detector, self.trackers, self.mtmc)
 
@@ -125,7 +124,7 @@ class MTMCGeneration:
 
 #########
 global_generator: MTMCGeneration = None # defined in __main__
-global_data_queue = eventlet.queue.Queue(maxsize=20)
+global_data_queue = eventlet.queue.Queue(maxsize=1)
 
 @sio.event
 def give_car_positions(sid):
@@ -219,7 +218,7 @@ def threaded_model():
                 global_data_queue.get(block=True)
             global_data_queue.put(data_dict, block=True)
 
-            sio.sleep(.5)
+            sio.sleep(0.1)
             print("Finished iteration model")
 
 @click.command()

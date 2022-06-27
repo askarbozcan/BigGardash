@@ -3,6 +3,8 @@ from typing import List, Tuple, Optional, Dict
 import pandas as pd
 import os
 from pathlib import Path
+import random
+
 
 @dataclass
 class Position:
@@ -78,7 +80,11 @@ class AICityDataset:
                 try:
                     c.position = self.CAMERA_POSITIONS[cid]
                 except KeyError:
-                    c.position = self.CAMERA_POSITIONS["default"]
+                    default = self.CAMERA_POSITIONS["default"]
+                    c.position = Position(default.lat, default.lon)
+                    c.position.lat += random.normalvariate(0, sigma=0.002)
+                    c.position.lon += random.normalvariate(0, sigma=0.002)
+
                     
                 cameras[cid] = c
 

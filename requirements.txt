@@ -25,3 +25,5 @@ regex
 patchify
 git+https://github.com/openai/CLIP.git
 Pillow
+seaborn
+pyyaml

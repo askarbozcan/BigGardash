@@ -1,5 +1,4 @@
 from typing import List, Dict
-from aem import con
 import clip
 from patchify import patchify
 import numpy as np

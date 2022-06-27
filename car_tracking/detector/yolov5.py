@@ -12,7 +12,8 @@ class YOLOV5Detector(BaseDetector):
         self.label_whitelist = label_whitelist
 
     def detect_frame(self, frame) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        dets = self.model(frame).xyxy[0]
+        with torch.no_grad():
+            dets = self.model(frame).xyxy[0]
         dets = dets.cpu().detach().numpy()
 
         if self.label_whitelist is not None:
