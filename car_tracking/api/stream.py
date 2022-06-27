@@ -1,4 +1,5 @@
 import eventlet
+from matplotlib.image import thumbnail
 import socketio
 import base64
 import click
@@ -13,6 +14,7 @@ from ..processor.mtmc import MTMCProcessor
 from ..clifs import DummyCLIFS, CLIPBG
 import json
 import random
+import numpy as np
 
 sio = socketio.Server(async_handlers=False, cors_allowed_origins="*", engineio_logger=False)
 app = socketio.WSGIApp(sio)
@@ -27,7 +29,7 @@ class MTMCGeneration:
         ds = AICityDataset(dataset_path, dataset_split)
         self.scenario = ds[scenario_id]
 
-        self.detector = YOLOV5Detector(model_str="yolov5n6", confidence=.2, label_whitelist=[2,3,5,7])
+        self.detector = YOLOV5Detector(model_str="yolov5s6", confidence=.2, label_whitelist=[2,3,5,7])
         self.trackers = {}
         for cam in self.scenario.cameras.values():
             self.trackers[cam.id] = SORT()
@@ -73,8 +75,26 @@ class MTMCGeneration:
                 boxes_dict, ids_dict, labels_dict = self.processor.update(frames_dict)
                 if len(boxes_dict) == 0:
                     continue
+                
+                # generate thumbnails
+                thumbnails = {}
+                for cam_id, frame in frames_dict.items():
+                    cutouts = []
+                    ignored_idxs = []
+                    for i,box in enumerate(boxes_dict[cam_id]):
+                        box = box.astype(int)
+                        cutout = frame[box[1]:box[3], box[0]:box[2]]
+                        if cutout.shape[0] < 1 or cutout.shape[1] < 1:
+                            ignored_idxs.append(i)
+                            continue
+                        cutouts.append(cutout)
 
-                res = {"frames": frames_dict, "boxes": boxes_dict, "ids": ids_dict, "labels": labels_dict}
+                    thumbnails[cam_id] = cutouts
+                    boxes_dict[cam_id] = np.delete(boxes_dict[cam_id], ignored_idxs, axis=0)
+                    ids_dict[cam_id] = [ids_dict[cam_id][i] for i in range(len(ids_dict[cam_id])) if i not in ignored_idxs]
+                    labels_dict[cam_id] = np.delete(labels_dict[cam_id], ignored_idxs, axis=0)
+
+                res = {"frames": frames_dict, "boxes": boxes_dict, "ids": ids_dict, "labels": labels_dict, "thumbnails":thumbnails}
                 MTMCGeneration.last_generated_dict = res
                 yield res
 
@@ -85,10 +105,15 @@ class MTMCGeneration:
             for cam_id, frame in result["frames"].items():
                 frame = cv2.resize(frame, (600, 480), interpolation=cv2.INTER_AREA)
                 frames[cam_id] = self.convert_frame_to_jpeg(frame)
+            
+            thumbnails = {}
+            for cam_id, cutouts in result["thumbnails"].items():
+                thumbnails[cam_id] = [self.convert_frame_to_jpeg(cutout) for cutout in cutouts]
+            
 
             boxes = {cam_id: x.tolist() for cam_id, x in result["boxes"].items()}
             labels = {cam_id: x.tolist() for cam_id, x in result["labels"].items()}
-            response_dict = {"frames":frames, "boxes": boxes, "ids": result["ids"], "labels": labels}
+            response_dict = {"frames":frames, "boxes": boxes, "ids": result["ids"], "labels": labels, "thumbnails": thumbnails}
             yield response_dict
 
     @staticmethod
@@ -119,10 +144,36 @@ def give_car_positions(sid):
 
 
 @sio.event
-def give_stream_data(sid):
+def give_stream_data(sid, cam_id):
     data_dict = global_data_queue.get()
-    sio.emit("receive_stream_data", data_dict)
+    response_dict = {}
+    for k in data_dict.keys():
+        response_dict[k] = data_dict[k][cam_id]
 
+    #print(response_dict)
+    print("Sending data for cam_id: {}".format(cam_id))
+    
+    random.seed(492)
+    car_colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for i in range(len(data_dict["ids"]))]
+    response_dict["car_colors"] = car_colors
+
+    response_list = []
+    for i in range(len(response_dict["ids"])):
+        item = {
+            "box": response_dict["boxes"][i],
+            "id": response_dict["ids"][i],
+            "label": response_dict["labels"][i],
+            "thumbnail": response_dict["thumbnails"][i],
+        }
+
+        response_list.append(item)
+
+    response_dict_new = {
+        "frame": response_dict["frames"],
+        "cars": response_list
+    }
+    #sio.emit("receive_stream_data", data_dict)
+    return response_dict_new
 @sio.event
 def give_camera_info(sid):
     print("accepted connection camera_info")

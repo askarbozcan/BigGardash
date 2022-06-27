@@ -42,7 +42,7 @@ class CLIPBG(BaseCLIFS):
 
         return feature_t, feature_data
         
-    def search(self, prompt: str, feature_t: torch.Tensor, feature_data: List, n=9, threshold=37):
+    def search(self, prompt: str, feature_t: torch.Tensor, feature_data: List, n=9, threshold=200):
         text_inputs = torch.cat([clip.tokenize(prompt)]).to(self.DEVICE)
         with torch.no_grad():
             text_features = self.model.encode_text(text_inputs)
@@ -58,6 +58,7 @@ class CLIPBG(BaseCLIFS):
                 break
             initial_match_data = feature_data[similarity_idx]
             score = float(values[indices_idx].cpu().numpy())
+            initial_match_data["score"] = score**2/100_000
             img_hash = '{}-{}'.format(initial_match_data["id"],
                                       initial_match_data["camera"])
             if img_hash in used_images:
@@ -87,7 +88,7 @@ class CLIPBG(BaseCLIFS):
                 cutout = frame[box[1]:box[3], box[0]:box[2]]
                 if cutout.shape[0] < 5 or cutout.shape[1] < 5:
                     continue
-                
+
                 cutouts.append(cutout)
                 res_ids.append(ids[cam_id][i])
                 cam_ids.append(cam_id)
